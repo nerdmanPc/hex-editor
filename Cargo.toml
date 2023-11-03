@@ -3,13 +3,10 @@ name = "hex-editor"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-#atk = "0.18.0"
-#cairo-rs = "0.18.2"
-#gio = "0.18.2"
-#glib = "0.18.2"
-#gtk = "0.18.1"
-gtk4 = "0.7.3"
-#pango = "0.18.0"
+eframe = "0.23.0"
+egui = "0.23.0"
+egui_extras = "0.23.0"
+emath = "0.23.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
