@@ -1,6 +1,10 @@
+#[allow(unused)]
 pub mod hexagon;
+#[allow(unused)]
 pub mod point;
+#[allow(unused)]
 pub mod tools;
+#[allow(unused)]
 pub mod layout;
 
 #[cfg(test)]
@@ -26,7 +30,6 @@ pub struct Grid {
     layout: Layout,
     data: HashMap<Hex, egui::Color32>
 }
-
 
 impl Grid {
     pub fn make_rhombus(min: Hex, max: Hex) -> Self {
