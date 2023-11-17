@@ -1,4 +1,5 @@
 use float_eq::derive_float_eq;
+use std::convert::From;
 
 #[derive_float_eq(
     ulps_tol = "PointUlps",
@@ -11,4 +12,27 @@ use float_eq::derive_float_eq;
 pub struct Point {
     pub x: f64,
     pub y: f64,
+}
+
+impl<T> From<[T;2]> for Point where T: Into<f64> + Copy {
+
+    fn from(value: [T;2]) -> Self {
+        Self { 
+            x: value[0].into(), 
+            y: value[1].into(),
+        }
+    }
+}
+
+impl<T, U> From<(T, U)> for Point where 
+    T: Into<f64> + Copy,
+    U: Into<f64> + Copy,
+{
+
+    fn from(value: (T, U)) -> Self {
+        Self { 
+            x:value.0.into(), 
+            y:value.1.into(),
+        }
+    }
 }

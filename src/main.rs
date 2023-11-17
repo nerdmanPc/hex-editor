@@ -4,7 +4,7 @@ use eframe::egui;
 mod app;
 mod model;
 
-use app::EditorInstance;
+use app::Editor;
 
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
@@ -18,7 +18,7 @@ fn main() -> Result<(), eframe::Error> {
             // This gives us image support:
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
-            Box::<EditorInstance>::default()
+            Box::<Editor>::default()
         }),
     )
 }

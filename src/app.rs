@@ -1,77 +1,95 @@
 
-use emath::Pos2;
+use emath::{
+    Pos2,
+    Rect,
+    RectTransform,
+};
 
-use crate::model::*;
-pub struct EditorInstance {
+use egui::{
+    Ui,
+    Sense,
+    Shape,
+    Stroke,
+    Color32,
+    Context,
+    SidePanel,
+    Response,
+    CentralPanel,
+};
+
+use eframe::{
+    App,
+    Frame,
+};
+
+use crate::model::{Grid, point};
+
+pub struct Editor {
     map: Grid,
-    color: egui::Color32,
+    color: Color32,
 }
 
-impl Default for EditorInstance {
+impl Default for Editor {
     fn default() -> Self {
         Self {
-            map: Grid::make_hex(Hex::new(0, 0), 8),
-            color: egui::Color32::from_rgb(25, 200, 100),
+            map: Grid::make_hex((0, 0), 8),
+            color: Color32::from_rgb(25, 200, 100),
         }
     }
 }
 
-impl eframe::App for EditorInstance {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let toolbox = egui::SidePanel::left("toolbox");
+impl App for Editor {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        let toolbox = SidePanel::left("toolbox");
         toolbox.show(ctx, |ui| {
             self.draw_toolbox(ui)
         });
-        let palette = egui::SidePanel::right("palette");
+        let palette = SidePanel::right("palette");
         palette.show(ctx, |ui| {
             self.draw_palette(ui)
         });
-        let canvas = egui::CentralPanel::default();
+        let canvas = CentralPanel::default();
         canvas.show(ctx, |ui| {
             self.draw_canvas(ui)
         });
     }
 }
 
-impl EditorInstance {
+impl Editor {
 
-    fn draw_toolbox(&mut self, ui: &mut egui::Ui) {
+    fn draw_toolbox(&mut self, ui: &mut Ui) {
         ui.label("Toolbox");
     }
-    fn draw_palette(&mut self, ui: &mut egui::Ui) {
+    fn draw_palette(&mut self, ui: &mut Ui) {
         ui.label("Palette");
     }
-    fn draw_canvas(&mut self, ui: &mut egui::Ui) -> egui::Response {
+    fn draw_canvas(&mut self, ui: &mut Ui) -> Response {
         ui.label("Canvas");
         let canvas_size = ui.available_size_before_wrap();
-        let (mut response, painter) = ui.allocate_painter(canvas_size, egui::Sense::drag());
+        let (mut response, painter) = ui.allocate_painter(canvas_size, Sense::drag());
         
-        let to_screen = emath::RectTransform::from_to(
-            egui::Rect::from_min_size(
-                egui::Pos2::ZERO, 
+        let to_screen = RectTransform::from_to(
+            Rect::from_min_size(
+                Pos2::ZERO, 
                 response.rect.square_proportions()
             ),
             response.rect
         );
         let from_screen = to_screen.inverse();
-        
 
         if let Some(pointer_pos) = response.interact_pointer_pos() {
-            let canvas_pos = from_screen * pointer_pos;
-            let Pos2 { x:canvas_x, y:canvas_y} = canvas_pos;
-            let cell = self.map.sample_cell(canvas_x as f64, canvas_y as f64);
-            //print!("pointer_pos: {:?}\ncanvas_pos: {:?}\ncell: {:?}\n", pointer_pos, canvas_pos, cell);
+            let canvas_pos: [f32; 2]  = (from_screen * pointer_pos).into();
+            let cell = self.map.sample_cell(canvas_pos);
             self.map.paint_cell(cell, self.color);
             response.mark_changed();
         }
 
         let shapes = self.map.cells().map( |(&hex, &color)| {
-                let points = LayoutTool::polygon_corners(self.map.layout(), hex);
-                let points = points.iter().map( |point| {
-                    let point = Pos2::new(point.x as f32, point.y as f32);
-                    to_screen * point
+                let points = self.map.polygon_corners(hex);
+                let points = points.map( |[point_x, point_y]| {
+                    to_screen * Pos2::new(point_x, point_y)
                 }).collect();
-                egui::Shape::convex_polygon(points, color, egui::Stroke::NONE)
+                Shape::convex_polygon(points, color, Stroke::NONE)
             });
         painter.extend(shapes);
         response

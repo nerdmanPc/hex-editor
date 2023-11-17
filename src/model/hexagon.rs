@@ -28,6 +28,24 @@ impl Hex {
     }
 }
 
+
+impl<T> From<[T;2]> for Hex where T: Into<i32> + Copy {
+
+    fn from(value: [T;2]) -> Self {
+        Self::new(value[0].into(), value[1].into())
+    }
+}
+
+impl<T, U> From<(T, U)> for Hex where 
+    T: Into<i32> + Copy,
+    U: Into<i32> + Copy,
+{
+
+    fn from(value: (T, U)) -> Self {
+        Self::new(value.0.into(), value.1.into())
+    }
+}
+
 #[derive_float_eq(
     ulps_tol = "PointUlps",
     ulps_tol_derive = "Clone, Copy, Debug, PartialEq",
