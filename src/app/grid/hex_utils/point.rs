@@ -1,4 +1,5 @@
 use float_eq::derive_float_eq;
+use emath::Pos2;
 use std::convert::From;
 
 #[derive_float_eq(
@@ -33,6 +34,16 @@ impl<T, U> From<(T, U)> for Point where
         Self { 
             x:value.0.into(), 
             y:value.1.into(),
+        }
+    }
+}
+
+impl From<Pos2> for Point {
+
+    fn from(value: Pos2) -> Self {
+        Self { 
+            x: value.x as f64, 
+            y: value.y as f64,
         }
     }
 }

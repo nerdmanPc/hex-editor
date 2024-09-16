@@ -1,8 +1,7 @@
 use eframe::egui;
 
-#[allow(unused)]
+//#[allow(unused)]
 mod app;
-mod model;
 
 use app::Editor;
 

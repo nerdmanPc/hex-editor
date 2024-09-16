@@ -1,38 +1,37 @@
-
-use emath::{
-    Pos2,
-    Rect,
-    RectTransform,
+use {
+    emath::{
+        Pos2,
+        Rect,
+        RectTransform,
+    },
+    egui::{
+        Ui,
+        Sense,
+        Shape,
+        Stroke,
+        Color32,
+        Context,
+        SidePanel,
+        Response,
+        CentralPanel,
+    },
+    eframe::{
+        App,
+        Frame,
+    },
 };
 
-use egui::{
-    Ui,
-    Sense,
-    Shape,
-    Stroke,
-    Color32,
-    Context,
-    SidePanel,
-    Response,
-    CentralPanel,
-};
-
-use eframe::{
-    App,
-    Frame,
-};
-
-use crate::model::{Grid, point};
+mod grid; use grid::Grid;
 
 pub struct Editor {
-    map: Grid,
+    grid: Grid,
     color: Color32,
 }
 
 impl Default for Editor {
     fn default() -> Self {
         Self {
-            map: Grid::make_hex((0, 0), 8),
+            grid: Grid::make_hex((0, 0), 8),
             color: Color32::from_rgb(25, 200, 100),
         }
     }
@@ -68,30 +67,47 @@ impl Editor {
         let canvas_size = ui.available_size_before_wrap();
         let (mut response, painter) = ui.allocate_painter(canvas_size, Sense::drag());
         
-        let to_screen = RectTransform::from_to(
-            Rect::from_min_size(
-                Pos2::ZERO, 
-                response.rect.square_proportions()
-            ),
-            response.rect
-        );
+        let to_screen = canvas_to_ui(&response.rect);
         let from_screen = to_screen.inverse();
 
-        if let Some(pointer_pos) = response.interact_pointer_pos() {
-            let canvas_pos: [f32; 2]  = (from_screen * pointer_pos).into();
-            let cell = self.map.sample_cell(canvas_pos);
-            self.map.paint_cell(cell, self.color);
+        if let Some(screen_pos) = response.interact_pointer_pos() {
+            let canvas_pos: [f32; 2]  = (from_screen * screen_pos).into();
+            let cell = self.grid.sample_cell(canvas_pos);
+            self.grid.paint_cell(cell, self.color);
             response.mark_changed();
         }
 
-        let shapes = self.map.cells().map( |(&hex, &color)| {
-                let points = self.map.polygon_corners(hex);
+        let shapes = self.grid.cells().map( |(&hex, &color)| {
+                let points = self.grid.polygon_corners(hex);
                 let points = points.map( |[point_x, point_y]| {
                     to_screen * Pos2::new(point_x, point_y)
                 }).collect();
-                Shape::convex_polygon(points, color, Stroke::NONE)
-            });
+                Shape::convex_polygon(points, color, Stroke{color: color, width: 1.0})
+            }
+        );
         painter.extend(shapes);
         response
     }
+}
+
+
+fn canvas_to_ui(ui_rect: &Rect) -> RectTransform {
+    RectTransform::from_to(
+        canvas_rect(ui_rect),
+        *ui_rect,
+    )
+}
+
+fn _ui_to_canvas(ui_rect: &Rect) -> RectTransform {
+    RectTransform::from_to(
+        *ui_rect,
+        canvas_rect(ui_rect),
+    )
+}
+
+fn canvas_rect(ui_rect: &Rect) -> Rect {
+    Rect::from_center_size(
+        Pos2::ZERO, 
+        ui_rect.square_proportions() * 2_f32
+    )
 }

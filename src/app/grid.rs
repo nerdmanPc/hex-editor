@@ -1,29 +1,13 @@
-#[allow(unused)]
-pub mod hexagon;
-#[allow(unused)]
-pub mod point;
-#[allow(unused)]
-pub mod tools;
-#[allow(unused)]
-pub mod layout;
+mod hex_utils; pub use hex_utils::*;
 
-#[cfg(test)]
-mod tests;
-
-pub use layout::{
-    Layout,
-    LayoutTool,
-    LAYOUT_ORIENTATION_POINTY,
+use {
+    std::{
+        collections::{HashMap, hash_map}, 
+        vec::IntoIter, 
+        iter::Map
+    }, 
+    egui::Color32
 };
-pub use hexagon::{
-    Hex,
-    HexMath,
-    HexRound,
-};
-pub use point::Point;
-
-use std::{collections::{HashMap, hash_map}, vec::IntoIter, iter::Map};
-use egui::Color32;
 
 pub struct Grid {
     layout: Layout,
@@ -32,7 +16,7 @@ pub struct Grid {
 
 impl Grid {
 
-    pub fn make_rhombus(min: impl Into<Hex>, max: impl Into<Hex>) -> Self {
+    pub fn _make_rhombus(min: impl Into<Hex>, max: impl Into<Hex>) -> Self {
         let (min, max): (Hex, Hex) = (min.into(), max.into());
         let mut instance = Self::default();
         for q in min.q() ..= max.q() {
@@ -44,7 +28,7 @@ impl Grid {
         instance
     }
 
-    pub fn make_triangle(min: impl Into<Hex>, size: i32) -> Self {
+    pub fn _make_triangle(min: impl Into<Hex>, size: i32) -> Self {
         let min: Hex = min.into();
         let mut instance = Self::default();
         for q in min.q() ..=  min.q() + size {
@@ -81,7 +65,7 @@ impl Grid {
         fractional_coord.round()
     }
 
-    pub fn polygon_corners(&self, key: Hex) -> Map<IntoIter<Point>, fn(Point) -> [f32; 2]>//Box<dyn Iterator<Item = [f32; 2]>>
+    pub fn polygon_corners(&self, key: Hex) -> Map<IntoIter<Point>, fn(Point)->[f32; 2]>//Box<dyn Iterator<Item = [f32; 2]>>
     {
         let convert_point: fn(Point) -> [f32; 2] = |point: Point| {
             [point.x as f32, point.y as f32]
@@ -91,10 +75,6 @@ impl Grid {
 
     pub fn cells(&self) -> hash_map::Iter<Hex, Color32> {
         self.data.iter()
-    }
-
-    pub fn layout(&self) -> Layout {
-        self.layout
     }
 }
 
