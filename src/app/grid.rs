@@ -1,17 +1,15 @@
 mod hex_utils; pub use hex_utils::*;
 
 use {
-    std::{
-        collections::{HashMap, hash_map}, 
-        vec::IntoIter, 
-        iter::Map
-    }, 
-    egui::Color32
+    egui::Color32, std::{
+        collections::{hash_map, HashMap}, iter::Map, vec::IntoIter
+    }
 };
 
 pub struct Grid {
     layout: Layout,
-    data: HashMap<Hex, Color32>
+    data: HashMap<Hex, Color32>,
+    rotation: [f32; 2],
 }
 
 impl Grid {
@@ -55,6 +53,12 @@ impl Grid {
         instance
     }
 
+    pub fn rotate(&mut self, amount: impl Into<[f32;2]>) {
+        let amount: [f32; 2] = amount.into();
+        self.rotation[0] += amount[0];
+        self.rotation[1] += amount[1];
+    }
+
     pub fn paint_cell(&mut self, cell: impl Into<Hex>, color: impl Into<Color32>) {
         self.data.insert(cell.into(), color.into());
     }
@@ -64,7 +68,6 @@ impl Grid {
         let fractional_coord = LayoutTool::pixel_to_hex(self.layout, pos.into());
         fractional_coord.round()
     }
-
     pub fn polygon_corners(&self, key: Hex) -> Map<IntoIter<Point>, fn(Point)->[f32; 2]>//Box<dyn Iterator<Item = [f32; 2]>>
     {
         let convert_point: fn(Point) -> [f32; 2] = |point: Point| {
@@ -87,9 +90,11 @@ impl Default for Grid {
             origin: Point { x: 0.0, y: 0.0 },
         };
         let data = HashMap::new();
+        let rotation = [0.0, 0.0];
         Self {
             layout,
             data,
+            rotation,
         }
     }
 }
