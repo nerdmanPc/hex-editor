@@ -1,4 +1,4 @@
-use eframe::egui;
+//use eframe::egui;
 
 //#[allow(unused)]
 mod app;
@@ -6,16 +6,14 @@ mod app;
 use app::Editor;
 
 fn main() -> Result<(), eframe::Error> {
-    /*let options = eframe::NativeOptions {
-        viewport: Some(egui::vec2(1360.0, 768.0)),
+    let options = eframe::NativeOptions {
         ..Default::default()
-    };*/
+    };
     eframe::run_native(
         "HexEditor",
-        Default::default(),
+        options,
         Box::new(|cc| {
             Ok(Box::new(Editor::new(&cc)))
         })
-        //Box::new(Box::new(|cc| Ok(Box::new(&dyn Editor::new(cc))))),
     )
 }

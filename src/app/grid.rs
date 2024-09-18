@@ -9,7 +9,7 @@ use {
 pub struct Grid {
     layout: Layout,
     data: HashMap<Hex, Color32>,
-    rotation: [f32; 2],
+    //rotation: [f32; 2],
 }
 
 impl Grid {
@@ -53,11 +53,11 @@ impl Grid {
         instance
     }
 
-    pub fn rotate(&mut self, amount: impl Into<[f32;2]>) {
+    /*pub fn rotate(&mut self, amount: impl Into<[f32;2]>) {
         let amount: [f32; 2] = amount.into();
         self.rotation[0] += amount[0];
         self.rotation[1] += amount[1];
-    }
+    }*/
 
     pub fn paint_cell(&mut self, cell: impl Into<Hex>, color: impl Into<Color32>) {
         self.data.insert(cell.into(), color.into());
@@ -90,11 +90,11 @@ impl Default for Grid {
             origin: Point { x: 0.0, y: 0.0 },
         };
         let data = HashMap::new();
-        let rotation = [0.0, 0.0];
+        //let rotation = [0.0, 0.0];
         Self {
             layout,
             data,
-            rotation,
+            //rotation,
         }
     }
 }
