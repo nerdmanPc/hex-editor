@@ -2,13 +2,14 @@ use {
     eframe::{
         egui_glow::{self, Painter}, glow::{self, HasContext}, App, CreationContext, Frame
     }, egui::{
-        mutex::Mutex, CentralPanel, Color32, Context, PaintCallback, RequestRepaintInfo, Response, Shape, SidePanel, Stroke, Ui 
+        mutex::Mutex, CentralPanel, Color32, Context, PaintCallback, Response, Ui 
     }, emath::{
         Pos2, Rect, RectTransform, Vec2
     }, std::{sync::Arc, u32}
 };
 
 mod grid; use grid::Grid;
+mod renderer; use renderer::Renderer;
 
 struct ArcMutex<T>(pub Arc<Mutex<T>>);
 impl<T> ArcMutex<T> {
@@ -39,9 +40,6 @@ impl App for Editor {
         });*/
         let canvas = CentralPanel::default();
         canvas.show(ctx, |ui| {
-            let ctrl_pressed = ctx.input(|input|{
-                input.key_down( egui::Key::Space)
-            });
             self.draw_viewport(ui)
         });
     }
@@ -64,58 +62,58 @@ impl Editor {
             renderer: Arc::new(Mutex::new(unsafe{Renderer::new(&gl)})),
         }
     }
-    fn draw_toolbox(&mut self, ui: &mut Ui) {
+    fn _draw_toolbox(&mut self, ui: &mut Ui) {
         ui.label("Toolbox");
     }
-    fn draw_palette(&mut self, ui: &mut Ui) {
+    fn _draw_palette(&mut self, ui: &mut Ui) {
         ui.label("Palette");
     }
     fn draw_viewport(&mut self, ui: &mut Ui) -> Response {
 
         ui.label("Viewport");
         let viewport_size = ui.available_size_before_wrap();
-        //let (mut response, painter) = ui.allocate_painter(viewport_size, egui::Sense::click_and_drag());
-        let (rect, mut response) = ui.allocate_exact_size(viewport_size, egui::Sense::click_and_drag());
+        let (mut response, painter) = ui.allocate_painter(viewport_size, egui::Sense::click_and_drag());
+        //let (_rect, mut response) = ui.allocate_exact_size(viewport_size, egui::Sense::click_and_drag());
  
-        let to_screen = canvas_to_ui(&response.rect);
-        let from_screen = to_screen.inverse();
+        let frustum_to_ui = canvas_to_ui(&response.rect);
+        let ui_to_frustum = frustum_to_ui.inverse();
 
         let space_pressed = ui.ctx().input(|input|{
             input.key_down( egui::Key::Space)
         });
-
+        
         if let (Some(screen_pos), false) = (response.interact_pointer_pos(), space_pressed) {
-            let canvas_pos: [f32; 2]  = (from_screen * screen_pos).into();
+            let canvas_pos: [f32; 2]  = (ui_to_frustum * screen_pos).into();
             let cell = self.grid.sample_cell(canvas_pos);
             self.grid.paint_cell(cell, self.color);
+            let mesh = self.grid.build_mesh();
+            let renderer_handle = self.renderer.clone();
+            let update_mesh_fn = move |_info, painter: &Painter| {
+                unsafe {renderer_handle.lock().update_mesh(painter.gl(), &mesh);}
+            };
+            let update_mesh_fn = egui_glow::CallbackFn::new(update_mesh_fn);
+            let update_mesh_fn = PaintCallback{
+                rect: response.rect,
+                callback: Arc::new(update_mesh_fn)
+            };
+            painter.add(update_mesh_fn);
             response.mark_changed();
-        } 
-        {
-            self.renderer.lock().rotate(response.drag_delta() * 0.1);
+        } /*else*/ {
+            self.renderer.lock().rotate(response.drag_delta() * 0.01);
             response.mark_changed();
         }
 
-        let renderer_handle = self.renderer.clone();
 
+        let renderer_handle = self.renderer.clone();
         let draw_contents_fn = move |_info, painter: &Painter| {
             unsafe {renderer_handle.lock().draw(painter.gl());}
         };
         let draw_contents_fn = egui_glow::CallbackFn::new(draw_contents_fn);
-
         let draw_contents_cb = PaintCallback{
             rect: response.rect,
             callback: Arc::new(draw_contents_fn)
         };
-        //draw shapes
-        /*let shapes = self.grid.cells().map( |(&hex, &color)| {
-            let points = self.grid.polygon_corners(hex);
-            let points = points.map( |[point_x, point_y]| {
-                to_screen * Pos2::new(point_x, point_y)
-            }).collect();
-            Shape::convex_polygon(points, color, Stroke{color: color, width: 1.0})
-        });*/
-        //painter.extend(shapes);
-        ui.painter().add(draw_contents_cb);
+        painter.add(draw_contents_cb);
         response
     }
 }
@@ -140,93 +138,4 @@ fn canvas_rect(ui_rect: &Rect) -> Rect {
         Pos2::ZERO, 
         ui_rect.square_proportions() * 2_f32
     )
-}
-
-struct Renderer {
-    program: glow::Program,
-    vertex_array: glow::VertexArray,
-    angle: f32,
-}
-
-impl Renderer {
-    pub unsafe fn new(gl: &glow::Context) -> Self {
-        use glow::HasContext;
-        let shader_version = egui_glow::ShaderVersion::get(gl);
-        let program = gl.create_program().expect("Failed to create shader program!");
-
-        let (vertex_shader_source, fragment_shader_source) = (
-            include_str!("shaders/vertex.glsl"),
-            include_str!("shaders/fragment.glsl")
-        );
-        
-        let shader_sources = [
-            (glow::VERTEX_SHADER, vertex_shader_source),
-            (glow::FRAGMENT_SHADER, fragment_shader_source),
-        ];
-
-        let compile_shaders = |(shader_type, shader_source): &(u32, &str)| {
-            let shader = gl
-                .create_shader(*shader_type)
-                .expect("Failed to create shader handle!");
-            gl.shader_source(
-                shader,
-                &format!(
-                    "{}\n{}",
-                    shader_version.version_declaration(),
-                    shader_source
-                ),
-            );
-            gl.compile_shader(shader);
-            assert!(
-                gl.get_shader_compile_status(shader),
-                "Failed to compile shader module {shader_type}!: {}",
-                gl.get_shader_info_log(shader)
-            );
-            gl.attach_shader(program, shader);
-            shader
-        };
-
-        let shaders: Vec<_> = shader_sources
-            .iter()
-            .map(compile_shaders)
-            .collect();
-
-        gl.link_program(program);
-        assert!(
-            gl.get_program_link_status(program),
-            "{}", gl.get_program_info_log(program)
-        );
-        for shader in shaders {
-            gl.detach_shader(program, shader);
-            gl.delete_shader(shader);
-        }
-        let vertex_array = gl
-            .create_vertex_array()
-            .expect("Cannot create vertex array!");
-        Self { 
-            program, 
-            vertex_array,
-            angle: 1.0
-        }
-    }
-
-    pub unsafe fn draw(&self, gl: &glow::Context) {
-        use glow::HasContext as _;
-        gl.use_program(Some((self.program)));
-        gl.uniform_1_f32(
-            gl.get_uniform_location(self.program, "u_angle").as_ref(),
-            self.angle
-        );
-        gl.bind_vertex_array(Some(self.vertex_array));
-        gl.draw_arrays(glow::TRIANGLES, 0, 3);
-    }
-
-    pub fn rotate(&mut self, angle: Vec2) {
-        self.angle += angle[0];
-    }
-
-    pub unsafe fn clear_resources(&self, gl: &glow::Context) {
-        gl.delete_program(self.program);
-        gl.delete_vertex_array(self.vertex_array);
-    }
 }
