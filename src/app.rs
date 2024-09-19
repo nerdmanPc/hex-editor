@@ -29,20 +29,20 @@ pub struct Editor {
 
 impl App for Editor {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        let toolbox = SidePanel::left("toolbox");
+        /*let toolbox = SidePanel::left("toolbox");
         toolbox.show(ctx, |ui| {
             self.draw_toolbox(ui)
         });
         let palette = SidePanel::right("palette");
         palette.show(ctx, |ui| {
             self.draw_palette(ui)
-        });
+        });*/
         let canvas = CentralPanel::default();
         canvas.show(ctx, |ui| {
             let ctrl_pressed = ctx.input(|input|{
                 input.key_down( egui::Key::Space)
             });
-            self.draw_viewport(ui, ctrl_pressed)
+            self.draw_viewport(ui)
         });
     }
     fn on_exit(&mut self, gl: Option<&glow::Context>) {
@@ -70,33 +70,41 @@ impl Editor {
     fn draw_palette(&mut self, ui: &mut Ui) {
         ui.label("Palette");
     }
-    fn draw_viewport(&mut self, ui: &mut Ui, ctrl_pressed: bool) -> Response {
+    fn draw_viewport(&mut self, ui: &mut Ui) -> Response {
 
         ui.label("Viewport");
         let viewport_size = ui.available_size_before_wrap();
-        let (mut response, painter) = ui.allocate_painter(viewport_size, egui::Sense::click_and_drag());
+        //let (mut response, painter) = ui.allocate_painter(viewport_size, egui::Sense::click_and_drag());
+        let (rect, mut response) = ui.allocate_exact_size(viewport_size, egui::Sense::click_and_drag());
  
         let to_screen = canvas_to_ui(&response.rect);
         let from_screen = to_screen.inverse();
 
-        if let (Some(screen_pos), false) = (response.interact_pointer_pos(), ctrl_pressed) {
+        let space_pressed = ui.ctx().input(|input|{
+            input.key_down( egui::Key::Space)
+        });
+
+        if let (Some(screen_pos), false) = (response.interact_pointer_pos(), space_pressed) {
             let canvas_pos: [f32; 2]  = (from_screen * screen_pos).into();
             let cell = self.grid.sample_cell(canvas_pos);
             self.grid.paint_cell(cell, self.color);
             response.mark_changed();
-        } else {
-            self.renderer.lock().rotate(response.drag_delta() * 0.0);
+        } 
+        {
+            self.renderer.lock().rotate(response.drag_delta() * 0.1);
+            response.mark_changed();
         }
 
-        let renderer_clone = self.renderer.clone();
+        let renderer_handle = self.renderer.clone();
 
-        let draw_contents = move |_info: RequestRepaintInfo, painter: Painter| {
-            unsafe {renderer_clone.lock().draw(painter.gl());}
+        let draw_contents_fn = move |_info, painter: &Painter| {
+            unsafe {renderer_handle.lock().draw(painter.gl());}
         };
+        let draw_contents_fn = egui_glow::CallbackFn::new(draw_contents_fn);
 
-        let draw_contents = PaintCallback{
+        let draw_contents_cb = PaintCallback{
             rect: response.rect,
-            callback: Arc::new(draw_contents)
+            callback: Arc::new(draw_contents_fn)
         };
         //draw shapes
         /*let shapes = self.grid.cells().map( |(&hex, &color)| {
@@ -107,7 +115,7 @@ impl Editor {
             Shape::convex_polygon(points, color, Stroke{color: color, width: 1.0})
         });*/
         //painter.extend(shapes);
-        painter.add(draw_contents);
+        ui.painter().add(draw_contents_cb);
         response
     }
 }
