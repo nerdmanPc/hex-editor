@@ -1,12 +1,13 @@
 use {
     eframe::{
-        egui_glow::{self, Painter}, glow::{self, HasContext}, App, CreationContext, Frame
+        egui_glow::{self, Painter}, glow::{self}, App, CreationContext, Frame
     }, egui::{
         mutex::Mutex, CentralPanel, Color32, Context, PaintCallback, Response, Ui 
     }, emath::{
-        Pos2, Rect, RectTransform, Vec2
-    }, std::{sync::Arc, u32}
+        Pos2, Rect, RectTransform
+    }
 };
+use std::sync::Arc;
 
 mod grid; use grid::Grid;
 mod renderer; use renderer::Renderer;
@@ -57,7 +58,7 @@ impl Editor {
         let gl = cc.gl.as_ref().expect("Aplication initialization failed!");
         //Memory and resource allocation issues likely come from here
         Self {
-            grid: Grid::make_hex((0, 0), 8),
+            grid: Grid::default(),
             color: Color32::from_rgb(25, 200, 100),
             renderer: Arc::new(Mutex::new(unsafe{Renderer::new(&gl)})),
         }
@@ -86,6 +87,7 @@ impl Editor {
             let canvas_pos: [f32; 2]  = (ui_to_frustum * screen_pos).into();
             let cell = self.grid.sample_cell(canvas_pos);
             self.grid.paint_cell(cell, self.color);
+
             let mesh = self.grid.build_mesh();
             let renderer_handle = self.renderer.clone();
             let update_mesh_fn = move |_info, painter: &Painter| {
@@ -97,6 +99,7 @@ impl Editor {
                 callback: Arc::new(update_mesh_fn)
             };
             painter.add(update_mesh_fn);
+
             response.mark_changed();
         } /*else*/ {
             self.renderer.lock().rotate(response.drag_delta() * 0.01);

@@ -82,7 +82,9 @@ impl Renderer {
         );
         gl.bind_vertex_array(Some(self.vertex_array));
         //gl.bind_vertex_buffer(0, Some(self.vertex_buffer), 0, 0);
-        gl.draw_arrays(glow::TRIANGLE_STRIP, 0, self.vertex_count);
+        for i in 0..self.vertex_count / 8 {
+            gl.draw_arrays(glow::TRIANGLE_FAN, i*8, 8);
+        }
     }
 
     pub unsafe fn update_mesh(&mut self, gl: &glow::Context, mesh: &[[f32;2]]) {

@@ -2,7 +2,7 @@ mod hex_utils; pub use hex_utils::*;
 
 use {
     egui::Color32, std::{
-        collections::{hash_map, HashMap}, iter::Map, vec::IntoIter
+        collections::HashMap, iter::Map, vec::IntoIter
     }
 };
 
@@ -71,7 +71,11 @@ impl Grid {
 
     pub fn build_mesh(&self) -> Vec<[f32;2]> {
         let cells = self.data.iter().map(|(hex, color)|{
-            let points = LayoutTool::polygon_corners(self.layout, *hex);
+
+            let mut points = LayoutTool::polygon_corners(self.layout, *hex);
+            points.push(points[0]);
+            let midpoint = points.iter().fold(Point{ x: 0.0, y: 0.0}, |acc, elem| { acc + *elem }) / points.len() as f64;
+            points.insert(0, midpoint);
             let points: Vec<_> = points
                 .iter()
                 .map(|Point{x, y}| {[*x as f32, *y as f32]})
@@ -89,7 +93,7 @@ impl Grid {
         }
     }
 
-    fn polygon_corners(&self, key: Hex) -> Map<IntoIter<Point>, fn(Point)->[f32; 2]>{
+    fn _polygon_corners(&self, key: Hex) -> Map<IntoIter<Point>, fn(Point)->[f32; 2]>{
 
         let convert_point: fn(Point) -> [f32; 2] = |point: Point| {
             [point.x as f32, point.y as f32]
@@ -107,11 +111,9 @@ impl Default for Grid {
             origin: Point { x: 0.0, y: 0.0 },
         };
         let data = HashMap::new();
-        //let rotation = [0.0, 0.0];
         Self {
             layout,
             data,
-            //rotation,
         }
     }
 }

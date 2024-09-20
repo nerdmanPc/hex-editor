@@ -11,5 +11,5 @@ uniform float u_angle;
 
 void main() {
     v_color = colors[gl_VertexID % 3];
-    gl_Position = vec4(v_position, 0.5, 1.0);
+    gl_Position = vec4( v_position.x, -v_position.y, 0.5, 1.0 );
 }
